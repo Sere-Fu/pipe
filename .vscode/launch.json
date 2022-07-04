@@ -31,11 +31,63 @@
                 // "--input", "./hires/tiny.jpg",
                 // "--input", "./hires/IMG_7590.JPG",
                 // "--input", "./hires/shuai.jpg",
-                // "--input", "./contrast/00040王敏红/1/IMG_3774.JPG",
-                // "--input", "./contrast/00048赵艺琳/0/IMG_8549.JPG",
+
+                // "--input", "./contrast/00040王敏红/0/IMG_8193.JPG",
+                // "--input", "./contrast/00040王敏红/1/IMG_3775.JPG",
+
+                "--input", "./contrast/00042姜钧/0/IMG_3928.JPG",
+
+                // "--input", "./contrast/00048赵艺琳/0/IMG_8550.JPG",
+                // "--input", "./contrast/00048赵艺琳/1/IMG_2813.JPG",
+
+                // "--input", "./contrast/00051薛宇昊/0/IMG_8969.JPG",
                 // "--input", "./contrast/00051薛宇昊/1/IMG_0447.JPG",
-                "--input", "./contrast/00107臧婕妤/1/IMG_9502.JPG",
+
+                // "--input", "./contrast/00052杨子平/0/IMG_8934.JPG",
+                // "--input", "./contrast/00052杨子平/1/IMG_5784.JPG",
+
+                // "--input", "./contrast/00065孙钰瑜/0/IMG_9787.JPG",
+                // "--input", "./contrast/00065孙钰瑜/1/IMG_0661.JPG",
+
+                // "--input", "./contrast/00069赵海云/0/IMG_0810.JPG",
+                // "--input", "./contrast/00069赵海云/1/IMG_1630.JPG",
+
+                // "--input", "./contrast/00075管子悦/0/IMG_1407.JPG",
+
+                // "--input", "./contrast/00079刘雅欣/0/IMG_1407.JPG",
+                // "--input", "./contrast/00079刘雅欣/1/IMG_2428.JPG",
+
+                // "--input", "./contrast/00087俞颖超/0/IMG_2954.JPG",
+                // "--input", "./contrast/00087俞颖超/1/IMG_5368.JPG",
+
+                // "--input", "./contrast/00088许哲宁/0/IMG_2254.JPG",
+                // "--input", "./contrast/00088许哲宁/1/IMG_2386.JPG",
+
+                // "--input", "./contrast/00091吉鑫/0/IMG_4148.JPG",
+                // "--input", "./contrast/00091吉鑫/1/IMG_5939.JPG",
+
+                // "--input", "./contrast/00107臧婕妤/0/IMG_0412.JPG",
+                // "--input", "./contrast/00107臧婕妤/1/IMG_9503.JPG",
+
+                // "--input", "./contrast/00532田博文/0/IMG_2112.JPG",
+                // "--input", "./contrast/00532田博文/1/IMG_7684.JPG",
+
+                // "--input", "./hires/IMG_7590.JPG",
                 "--output", "./contrast_out",
+            ]
+        },
+        {
+            "name": "roi_align",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--input", "./roi_in/00112丁浩宇/0",
+                "--sharedIdentity", 
+                "--output", "./roi_out",
+                // "--skipSeg"
             ]
         }
     ]

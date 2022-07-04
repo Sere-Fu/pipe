@@ -1,3 +1,4 @@
+from functools import total_ordering
 from image import Image, ImageFolder, overlayImage, saveImage
 from gaussiansmoothing import GaussianSmoothing, smoothImage
 from projection import estimateCameraPosition
@@ -340,12 +341,13 @@ class Optimizer:
 
         # self.saveParameters(self.outputDir + 'checkpoints/stage3_output.pickle')
 
-    def runSeg(self, img_f):
-        config_file = "configs/fcn/fcn_d6_r50-d16_512x1024_40k_pws.py"
-        checkpoint_file = 'iter_16000.pth'
+    def runSeg(self):
+        config_file = "fcn_pws_shallower.py"
+        checkpoint_file = 'iter_31200.pth'
         model = init_segmentor(config_file, checkpoint_file, device='cuda:0')
-        mask = inference_segmentor(model, img_f)
-        self.mask = mask[0]
+        img_fs = [os.path.join('./roi_in/', *self.outputDir.split('/')[2:], img) for img in self.inputImage.imageNames]
+        masks = [inference_segmentor(model, img) for img in img_fs]
+        self.masks = [mask[0] for mask in masks]
         
     def saveOutput(self, samples,  outputDir = None, prefix = ''):
         if outputDir is None:
@@ -382,13 +384,13 @@ class Optimizer:
         illum = self.pipeline.render(diffuseTextures=torch.ones_like(vDiffTextures), specularTextures=torch.zeros_like(vDiffTextures))
 
         for i in range(diffuseAlbedo.shape[0]):
-            saveObj(outputDir + prefix + '/mesh' + str(i) + '.obj',
-                    'material' + str(i) + '.mtl',
-                    cameraVerts[i],
-                    self.pipeline.faces32,
-                    cameraNormals[i],
-                    self.pipeline.morphableModel.uvMap,
-                    prefix + 'diffuseMap_' + str(self.getTextureIndex(i)) + '.png')
+            # saveObj(outputDir + prefix + '/mesh' + str(i) + '.obj',
+            #         'material' + str(i) + '.mtl',
+            #         cameraVerts[i],
+            #         self.pipeline.faces32,
+            #         cameraNormals[i],
+            #         self.pipeline.morphableModel.uvMap,
+            #         prefix + 'diffuseMap_' + str(self.getTextureIndex(i)) + '.png')
 
             saveObj(outputDir + prefix + '/ori_mesh' + str(i) + '.obj',
                     'material' + str(i) + '.mtl',
@@ -398,11 +400,11 @@ class Optimizer:
                     self.pipeline.morphableModel.uvMap,
                     prefix + 'diffuseMap_' + str(self.getTextureIndex(i)) + '.png')
 
-            envMaps = self.pipeline.sh.toEnvMap(self.pipeline.vShCoeffs, self.config.smoothSh) #smooth
-            ext = '.png'
-            if self.config.saveExr:
-                ext = '.exr'
-            saveImage(envMaps[i], outputDir + '/envMap_' + str(i) + ext)
+            # envMaps = self.pipeline.sh.toEnvMap(self.pipeline.vShCoeffs, self.config.smoothSh) #smooth
+            # ext = '.png'
+            # if self.config.saveExr:
+            #     ext = '.exr'
+            # saveImage(envMaps[i], outputDir + '/envMap_' + str(i) + ext)
 
             #saveImage(diffuseAlbedo[self.getTextureIndex(i)],  outputDir + prefix +  'diffuse_' + str(self.getTextureIndex(i)) + '.png')
             #saveImage(specularAlbedo[self.getTextureIndex(i)], outputDir + prefix + 'specular_' + str(self.getTextureIndex(i)) + '.png')
@@ -422,24 +424,25 @@ class Optimizer:
             saveImage(renderAll, outputDir + '/render_' + str(i) + '.png')
 
             saveImage(vDiffTextures[self.getTextureIndex(i)], outputDir + prefix + 'diffuseMap_' + str(self.getTextureIndex(i)) + '.png')
-            saveImage(vSpecTextures[self.getTextureIndex(i)], outputDir + prefix + 'specularMap_' + str(self.getTextureIndex(i)) + '.png')
-            saveImage(vRoughTextures[self.getTextureIndex(i)].repeat(1, 1, 3), outputDir + prefix  + 'roughnessMap_' + str(self.getTextureIndex(i)) + '.png')
+            # saveImage(vSpecTextures[self.getTextureIndex(i)], outputDir + prefix + 'specularMap_' + str(self.getTextureIndex(i)) + '.png')
+            # saveImage(vRoughTextures[self.getTextureIndex(i)].repeat(1, 1, 3), outputDir + prefix  + 'roughnessMap_' + str(self.getTextureIndex(i)) + '.png')
 
-
-    def showOnMesh(self, v_list):  # 0~28587 -> 28597~57184
-        with open(osp.join(self.outputDir, 'ori_mesh0.obj') ,'r') as f:
-            content = f.readlines()
-        
-        d = cv2.imread(osp.join(self.outputDir, 'diffuseMap_0.png'))
-        d[0,0] = np.array([0,0,0])
-        cv2.imwrite(osp.join(self.outputDir, 'diffuseMap_0.png'), d)
-
-        for idx in v_list:
-            content[idx + 28597] = "vt 0.0 0.0 \n"
+    def showOnMesh(self, v_lists):  # 0~28587 -> 28597~57184
+        for i in range(self.framesNumber):
+            v_list = v_lists[i]
+            with open(osp.join(self.outputDir, 'ori_mesh0.obj') ,'r') as f:
+                content = f.readlines()
             
+            d = cv2.imread(osp.join(self.outputDir, 'diffuseMap_0.png'))
+            d[0,0] = np.array([0,0,0])
+            cv2.imwrite(osp.join(self.outputDir, 'diffuseMap_0.png'), d)
 
-        with open(osp.join(self.outputDir, 'annotated.obj'), 'w') as f:
-            f.writelines(content)
+            for idx in v_list:
+                content[idx + 28597] = "vt 0.0 0.0 \n"
+                
+
+            with open(osp.join(self.outputDir, f'annotated_{i}.obj'), 'w') as f:
+                f.writelines(content)
 
     def get_tri_area(self, face, cameraVerts):
         v0 = cameraVerts[face[0]]
@@ -457,40 +460,57 @@ class Optimizer:
 
         projPoints = self.pipeline.vFocals.view(-1, 1, 1) * cameraVerts[..., :2] / cameraVerts[..., 2:]
         projPoints += self.inputImage.center.unsqueeze(1)
-        # pixels = projPoints.cpu().detach().numpy().astype(np.uint32)[0]
-        pixels = np.flip(projPoints.cpu().detach().numpy()[0], axis=1)
 
+        cameraVerts = cameraVerts.cpu().detach().numpy() # array (28588, 3) float32
+        cameraNormals = cameraNormals.cpu().detach().numpy() # array (28588, 3) float32
 
-        cameraVerts = cameraVerts[0].cpu().detach().numpy() # array (28588, 3) float32
-        cameraNormals = cameraNormals[0].cpu().detach().numpy() # array (28588, 3) float32
-        # pixels = np.flip(torch.load('./pg/pixels.pt'), 1) # array (28588, 2) uint32
-        mask = cv2.resize(self.mask, (self.inputImage.width, self.inputImage.height), interpolation=cv2.INTER_NEAREST)
-        mask = mask.astype(np.uint32)  # 512, 341
+        pixels = np.flip(projPoints.cpu().detach().numpy(), axis=-1)
+        masks = [cv2.resize(mask, (self.inputImage.width, self.inputImage.height), interpolation=cv2.INTER_NEAREST).astype(np.uint32) for mask in self.masks]
         faces32 = self.pipeline.faces32.cpu().detach().numpy()  # array (56572, 3)
         faces = [tuple(f.tolist()) for f in faces32]
         # pixels  right, down -> after flip down, right
         # mask down, right
 
-        coords_of_vertices = [(i[0], i[1]) for i in pixels]
-        # idx_of_chosen_vertices = [i for i in range(len(pixels)) if mask[int(coords_of_vertices[i][0]), int(coords_of_vertices[i][1])] == 1]
-        idx_of_chosen_vertices = [i for i in range(len(pixels)) if mask[int(coords_of_vertices[i][0]), int(coords_of_vertices[i][1])] == 1 and cameraNormals[i][2]<0]
+        coords_of_vertices = [[(i[0], i[1]) for i in pixel] for pixel in pixels]   # (ps, 28588, 2)
+        idx_of_chosen_vertices = []
+        idx_of_chosen_faces = []
+        vNUMS = []
+        fNUMS = []
+        total_surface_area = []
+        for i in range(self.framesNumber):
+            idx_of_chosen_vertices.append([j for j in range(len(pixels[i])) if masks[i][int(coords_of_vertices[i][j][0]), int(coords_of_vertices[i][j][1])] == 1 and cameraNormals[i][j][2]<0])
+            idx_of_chosen_faces.append([idx for idx in range(len(faces)) if all([v in idx_of_chosen_vertices[i] for v in faces[idx]])])
+
+        # coords2vertexIdx = {}
+        # for idx in idx_of_chosen_vertices:
+        #     before = coords2vertexIdx.get(coords_of_vertices[idx])
+        #     if before is None:
+        #         coords2vertexIdx[coords_of_vertices[idx]] = idx
+        #     elif cameraVerts[idx][2] < cameraVerts[before][2]:
+        #         coords2vertexIdx[coords_of_vertices[idx]] = idx
+
+        # coords2vertexIdx = []
+        # for i in range(len(self.inputImage.imageNames)):
+        #     coords2vertexIdx.append({})
 
 
-        coords2vertexIdx = {}
-        for idx in idx_of_chosen_vertices:
-            before = coords2vertexIdx.get(coords_of_vertices[idx])
-            if before is None:
-                coords2vertexIdx[coords_of_vertices[idx]] = idx
-            elif cameraVerts[idx][2] < cameraVerts[before][2]:
-                coords2vertexIdx[coords_of_vertices[idx]] = idx
+        # idx_of_chosen_vertices = [idx for idx in coords2vertexIdx.values()]
 
-        idx_of_chosen_vertices = [idx for idx in coords2vertexIdx.values()]
-        idx_of_chosen_faces = [idx for idx in range(len(faces)) if all([v in idx_of_chosen_vertices for v in faces[idx]])]
-        print('vNUMS', len(idx_of_chosen_vertices))
-        print('fNUMS', len(idx_of_chosen_faces))
+        # idx_of_chosen_faces = [idx for idx in range(len(faces)) if all([v in idx_of_chosen_vertices for v in faces[idx]])]
+            vNUMS.append(len(idx_of_chosen_vertices[i]))
+            fNUMS.append(len(idx_of_chosen_faces[i]))
+            print('vNUMS: ', vNUMS[i])
+            print('fNUMS: ', fNUMS[i])
 
-        total_surface_area = sum([self.get_tri_area(faces[idx], cameraVerts) for idx in idx_of_chosen_faces])
-        print(total_surface_area)
+            total_surface_area.append(sum([self.get_tri_area(faces[idx], cameraVerts[i]) for idx in idx_of_chosen_faces[i]]))
+            print('total_surface_area: ', total_surface_area[i])
+
+        with open(osp.join(self.outputDir, 'stat.dat'), 'w') as f:
+            for i in range(self.framesNumber):
+                f.write(f"imageName: {self.inputImage.imageNames[i]}\n")
+                f.write(f"vNUMS: {vNUMS[i]}\n")
+                f.write(f"fNUMS: {fNUMS[i]}\n")
+                f.write(f"total_surface_area: {total_surface_area[i]}\n")
         self.showOnMesh(idx_of_chosen_vertices)
 
     def run(self, imagePathOrDir, sharedIdentity = False, checkpoint = None, doStep1 = True, doStep2 = True, doStep3 = True, doSeg = True):
@@ -516,7 +536,7 @@ class Optimizer:
         import time
         start = time.time()
         if doSeg:
-            self.runSeg(imagePathOrDir)
+            self.runSeg()
         if doStep1:
             self.runStep1()
             if self.config.saveIntermediateStage:

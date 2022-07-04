@@ -36,7 +36,8 @@ if __name__ == "__main__":
 
     inputDir = params.input
     sharedIdentity = params.sharedIdentity
-    outputDir = params.output + '/' + os.path.basename(inputDir.strip('/'))
+    # outputDir = params.output + '/' + os.path.basename(inputDir.strip('/'))
+    outputDir = os.path.join(params.output, *inputDir.split('/')[2:])
 
     configFile = params.config
     checkpoint = params.checkpoint
@@ -50,6 +51,16 @@ if __name__ == "__main__":
     if config.device == 'cuda' and torch.cuda.is_available() == False:
         print('no cuda enabled device found. switching to cpu... ')
         config.device = 'cpu'
+
+    
+    #check if mediapipe is available
+
+    if config.lamdmarksDetectorType == 'mediapipe':
+        try:
+            from  landmarksmediapipe import LandmarksDetectorMediapipe
+        except:
+            print('[WARN] Mediapipe for landmarks detection not availble. falling back to FAN landmarks detector. You may want to try Mediapipe because it is much accurate than FAN (pip install mediapipe)')
+            config.lamdmarksDetectorType = 'fan'
 
     optimizer = Optimizer(outputDir, config)
     optimizer.run(inputDir,

@@ -92,6 +92,7 @@ class ImageFolder:
         supportedFormats = ['.jpg', '.jpeg', '.png']
 
         filenames = next(walk(path), (None, None, []))[2]
+        filenames = sorted(filenames)
         width = None
         height = None
         ct = 0

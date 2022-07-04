@@ -1,7 +1,13 @@
 __pycache__
-configs
 hires
 out
 *.pth
+baselMorphableModel
+contrast
+contrast_out
+new_out
+basel.tar
+roi_in
+roi_out
 
 
