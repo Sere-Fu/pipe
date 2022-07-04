@@ -4,7 +4,7 @@ import torch
 import cv2
 
 
-class LandmarksDetector:
+class LandmarksDetectorFAN:
 	def __init__(self, mask, device):
 		'''
 		init landmark detector with given mask on target device
@@ -65,4 +65,3 @@ class LandmarksDetector:
 		for x in land:
 			cv2.circle(clone, (int(x[0]), int(x[1])), 1, (0, 0, 255), -1)
 		return clone
-

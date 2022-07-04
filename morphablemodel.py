@@ -9,7 +9,7 @@ import os
 
 class MorphableModel:
 
-    def __init__(self, path, textureResolution = 256, trimPca = False, device='cuda'):
+    def __init__(self, path, textureResolution = 256, trimPca = False, landmarksPathName = 'landmark_62_mp.txt', device='cuda'):
         '''
         a statistical morphable model is a generative model that can generate faces with different identity, expression and skin reflectance
         it is mainly composed of an orthogonal basis (eigen vectors) obtained from applying principal component analysis (PCA) on a set of face scans.
@@ -17,6 +17,7 @@ class MorphableModel:
         :param path: drive path of where the data of the morphable model is saved
         :param textureResolution: the resolution of the texture used for diffuse and specular reflectance
         :param trimPca: if True keep only a subset of the PCA basis
+        :param landmarksPathName: a text file conains the association between the 2d pixel position and the 3D points in the mesh
         :param device: where to store the morphableModel data (cpu or gpu)
         '''
         assert textureResolution == 256 or textureResolution == 512 or textureResolution == 1024 or textureResolution == 2048 #can handle only 256 or 512 texture res
@@ -27,9 +28,8 @@ class MorphableModel:
         pathH5Model = path + '/model2017-1_face12_nomouth.h5'
         pathAlbedoModel = path + '/albedoModel2020_face12_albedoPart.h5'
         pathUV = path + '/uvParametrization.' + str(textureResolution) + '.pickle'
-        #landmarks association file only 54 or 62 are available. 68 can improve
-        pathLandmarks = path + '/landmark_62.txt'
-        #pathLandmarks = path + '/landmark_54.txt'
+        pathLandmarks = path + '/' + landmarksPathName
+
         pathPickleFileName = path + '/morphableModel-2017.pickle'
         pathNormals = path + '/normals.pickle'
 
